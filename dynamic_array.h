@@ -12,6 +12,7 @@ API:
 - structures:
     DA_CREATE_STRUCT - create definition for 'da' struct
                        with passed type and name
+    DA_FORLOOP       - support macros for shorter for-loop
 
 - functions^3:
     da_append        - append value to end of 'da'
@@ -38,7 +39,7 @@ int main(int argc, char** argv) {
     da_append_many(&args, argv, argc);
     for (size_t i = 0; i < args.count; i++)
         puts(args.items[i]);
-    da_free(&args);
+    da_free(&args, DA_NULL_DTOR);
     return 0;
 }
 '''
@@ -70,6 +71,10 @@ typedef struct {     \
     size_t count;    \
     size_t capacity; \
 } name;
+
+/* Short syntax for-loop */
+#define DA_FORLOOP(var, init, end) \
+for (size_t var = init; var < end; ++var)
 
 /**
  * @brief add `value` to end `da`
@@ -113,22 +118,32 @@ typedef struct {     \
  * @brief set all items at zero,
  * set `count` = 0 and save capacity
  * @param da pointer to dynamic array
+ * @param dtor pointer to destroy function
+ *             with signature `void (type*)`
  */
-#define da_clear(da) do {                    \
-    memset((da)->items, 0,                   \
-        (da)->count * sizeof(*(da)->items)); \
-    (da)->count = 0;                         \
+#define da_clear(da, dtor) do {        \
+    if ((dtor) != NULL)                \
+        DA_FORLOOP(i, 0, (da)->count)  \
+            (dtor)(&(da)->items[i]);   \
+    memset((da)->items, 0, (da)->count \
+        * sizeof(*(da)->items));       \
+    (da)->count = 0;                   \
 } while (0)
 
 /**
  * @brief free memory for `da` and set fields at zero
  * @param da pointer to dynamic array
+ * @param dtor pointer to destroy function
+ *             with signature `void (type*)`
  */
-#define da_free(da) do { \
-    free((da)->items);   \
-    (da)->items = NULL;  \
-    (da)->count = 0;     \
-    (da)->capacity = 0;  \
+#define da_free(da, dtor) do {        \
+    if ((dtor) != NULL)               \
+        DA_FORLOOP(i, 0, (da)->count) \
+            (dtor)(&(da)->items[i]);  \
+    free((da)->items);                \
+    (da)->items = NULL;               \
+    (da)->count = 0;                  \
+    (da)->capacity = 0;               \
 } while (0)
 
 /**
@@ -160,16 +175,18 @@ typedef struct {     \
  * @param dtor pointer to destroy function
  *             with signature `void (type*)`
  */
-#define da_remove_many(da, i, j, dtor) do {        \
-    assert((i) < (da)->count && (j) <= (da)->count \
-        && "Out of range");                        \
-    if ((dtor) != NULL)                            \
-        for (size_t k = (i); k < (j); k++)         \
-            (dtor)(&(da)->items[k]);               \
-    memmove(&(da)->items[(i)], &(da)->items[(j)],  \
-        sizeof(*(da)->items) *                     \
-            ((da)->count - (j)));                  \
-    (da)->count -= (j) - (i);                      \
+#define da_remove_many(da, i, j, dtor) do { \
+    assert((i) < (da)->count                \
+        && (j) <= (da)->count               \
+        && "Out of range");                 \
+    if ((dtor) != NULL)                     \
+        DA_FORLOOP(k, (i), (j))             \
+            (dtor)(&(da)->items[k]);        \
+    memmove(&(da)->items[(i)],              \
+        &(da)->items[(j)],                  \
+        sizeof(*(da)->items) *              \
+            ((da)->count - (j)));           \
+    (da)->count -= (j) - (i);               \
 } while (0)
 
 /**
