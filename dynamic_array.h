@@ -23,6 +23,8 @@ API:
                         with passed type and name
     DA_DEFINE_STRUCT  - create definition for 'da' struct
                         with passed type and name
+    DA_DECLARE_ALL    - expand to all declaration macros
+    DA_DEFINE_ALL     - expand to all definition macros
 
 - functions:
     da_append        - append value to end of 'da'
@@ -279,5 +281,27 @@ DA_DECLARE_SHRINK_TO_FIT(type) {               \
         da->capacity * sizeof(*da->items));    \
     assert(da->items != NULL && "Not memory"); \
 }
+
+#define DA_DECLARE_ALL(type, name) \
+DA_DECLARE_STRUCT(type, name) \
+DA_DECLARE_APPEND(type);      \
+DA_DECLARE_APPEND_MANY(type); \
+DA_DECLARE_CLEAR(type);       \
+DA_DECLARE_FREE(type);        \
+DA_DECLARE_REMOVE(type);      \
+DA_DECLARE_REMOVE_MANY(type); \
+DA_DECLARE_RESERVE(type);     \
+DA_DECLARE_SHRINK_TO_FIT(type);
+
+#define DA_DEFINE_ALL(type, name) \
+DA_DEFINE_STRUCT(type, name) \
+DA_DEFINE_APPEND(type)       \
+DA_DEFINE_APPEND_MANY(type)  \
+DA_DEFINE_CLEAR(type)        \
+DA_DEFINE_FREE(type)         \
+DA_DEFINE_REMOVE(type)       \
+DA_DEFINE_REMOVE_MANY(type)  \
+DA_DEFINE_RESERVE(type)      \
+DA_DEFINE_SHRINK_TO_FIT(type)
 
 #endif // DYNAMIC_ARRAY_H
