@@ -27,6 +27,7 @@ API:
                         with passed type and name
     DA_DEFINE_STRUCT  - create definition for 'da' struct
                         with passed type and name
+    DA_FOREACH        - For-loop macros, as range-based for-loop in C++
     DA_DECLARE_ALL    - expand to all declaration macros
     DA_DEFINE_ALL     - expand to all definition macros
 
@@ -58,8 +59,9 @@ DA_DEFINE_FREE(cstr_t)
 int main(int argc, char** argv) {
     args_t args = {0};
     da_append_many(cstr_t)(&args, (cstr_t*)argv, argc);
-    for (size_t i = 0; i < args.count; i++)
-        puts(args.items[i]);
+    DA_FOREACH(cstr_t, arg, &args) {
+        puts(*arg);
+    }
     da_free(cstr_t)(&args, NULL);
     return 0;
 }
@@ -85,9 +87,15 @@ Footnotes:
 #define DA_FUNC_NAME(name, type) da_fn_ ## name ## _ ## type
 #define DA_STRUCT_NAME(type)     da_struct_          ## type
 
-/* Short syntax for-loop */
+/* Short syntax for-loop, for implementation */
 #define DA_FORLOOP(var, init, end) \
 for (size_t var = init; var < end; ++var)
+
+/* For loop macros, as range-for in c++ */
+#define DA_FOREACH(type, item_ptr_name, da)    \
+for (type* item_ptr_name = (da)->items;        \
+    item_ptr_name < (da)->items + (da)->count; \
+    ++item_ptr_name)
 
 /* declare and define structure for dynamic array */
 #define DA_DECLARE_STRUCT(type, name) \
@@ -166,14 +174,14 @@ DA_DECLARE_APPEND_MANY(type) {                          \
 void da_clear(type)(             \
 struct DA_STRUCT_NAME(type)* da, \
 void (*dtor)(type*))
-#define DA_DEFINE_CLEAR(type)        \
-DA_DECLARE_CLEAR(type) {             \
-    if (dtor != NULL)                \
-        DA_FORLOOP(i, 0, da->count)  \
-            dtor(&da->items[i]);     \
-    memset(da->items, 0, da->count   \
-        * sizeof(*da->items));       \
-    da->count = 0;                   \
+#define DA_DEFINE_CLEAR(type)      \
+DA_DECLARE_CLEAR(type) {           \
+    if (dtor != NULL)              \
+        DA_FOREACH(type, item, da) \
+            dtor(item);            \
+    memset(da->items, 0, da->count \
+        * sizeof(*da->items));     \
+    da->count = 0;                 \
 }
 
 /**
@@ -187,15 +195,15 @@ DA_DECLARE_CLEAR(type) {             \
 void da_free(type)(              \
 struct DA_STRUCT_NAME(type)* da, \
 void (*dtor)(type*))
-#define DA_DEFINE_FREE(type)         \
-DA_DECLARE_FREE(type) {              \
-    if (dtor != NULL)                \
-        DA_FORLOOP(i, 0, da->count)  \
-            dtor(&da->items[i]);     \
-    free(da->items);                 \
-    da->items = NULL;                \
-    da->count = 0;                   \
-    da->capacity = 0;                \
+#define DA_DEFINE_FREE(type)       \
+DA_DECLARE_FREE(type) {            \
+    if (dtor != NULL)              \
+        DA_FOREACH(type, item, da) \
+            dtor(item);            \
+    free(da->items);               \
+    da->items = NULL;              \
+    da->count = 0;                 \
+    da->capacity = 0;              \
 }
 
 /**
