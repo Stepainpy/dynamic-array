@@ -19,6 +19,10 @@ API:
                           maybe set by user before include this file
 
 - structures:
+    DA_DEFINE_CUSTOM_FIELDS_STRUCT -
+                        create definition for 'da' struct
+                        with passed type, name and custom
+                        fields definition from variadic arguments
     DA_DECLARE_STRUCT - create declaration for 'da' struct
                         with passed type and name
     DA_DEFINE_STRUCT  - create definition for 'da' struct
@@ -88,13 +92,16 @@ for (size_t var = init; var < end; ++var)
 /* declare and define structure for dynamic array */
 #define DA_DECLARE_STRUCT(type, name) \
 typedef struct DA_STRUCT_NAME(type) name;
-#define DA_DEFINE_STRUCT(type, name) \
+#define DA_DEFINE_CUSTOM_FIELDS_STRUCT(type, name, ...) \
 DA_DECLARE_STRUCT(type, name) \
 struct DA_STRUCT_NAME(type) { \
     type*  items;    \
     size_t count;    \
     size_t capacity; \
+    __VA_ARGS__      \
 };
+#define DA_DEFINE_STRUCT(type, name) \
+DA_DEFINE_CUSTOM_FIELDS_STRUCT(type, name)
 
 /**
  * @brief add `value` to end `da`
