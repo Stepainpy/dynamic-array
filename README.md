@@ -16,8 +16,9 @@ DA_DEFINE_FREE(cstr_t)
 int main(int argc, char** argv) {
     args_t args = {0};
     da_append_many(cstr_t)(&args, (cstr_t*)argv, argc);
-    for (size_t i = 0; i < args.count; i++)
-        puts(args.items[i]);
+    DA_FOREACH(cstr_t, arg, &args) {
+        puts(*arg);
+    }
     da_free(cstr_t)(&args, NULL);
     return 0;
 }

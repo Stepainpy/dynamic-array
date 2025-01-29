@@ -109,7 +109,7 @@ struct DA_STRUCT_NAME(type) { \
     __VA_ARGS__      \
 };
 #define DA_DEFINE_STRUCT(type, name) \
-DA_DEFINE_CUSTOM_FIELDS_STRUCT(type, name)
+DA_DEFINE_CUSTOM_FIELDS_STRUCT(type, name, )
 
 /**
  * @brief add `value` to end `da`
