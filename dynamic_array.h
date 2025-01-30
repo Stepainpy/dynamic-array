@@ -57,6 +57,9 @@ Footnotes:
 
 #ifndef DA_DEFAULT_INIT_CAP
 #define DA_DEFAULT_INIT_CAP 64
+#elif DA_DEFAULT_INIT_CAP == 0
+#undef DA_DEFAULT_INIT_CAP
+#define DA_DEFAULT_INIT_CAP 64
 #endif
 
 #define DA_FUNC_NAME(name, type) da_fn_ ## name ## _ ## type
