@@ -8,7 +8,7 @@ Implement dynamic array in C. Documentation in header file.
 #include "dynamic_array.h"
 #include <stdio.h>
 
-typedef const char* cstr_t; // otherwise macro-magic cannot work
+typedef const char* cstr_t; // otherwise macro-magic can't work
 DA_DEFINE_STRUCT(cstr_t, args_t)
 DA_DEFINE_APPEND_MANY(cstr_t)
 DA_DEFINE_FREE(cstr_t)
@@ -19,7 +19,7 @@ int main(int argc, char** argv) {
     DA_FOREACH(cstr_t, arg, &args) {
         puts(*arg);
     }
-    da_free(cstr_t)(&args, NULL);
+    da_free(cstr_t)(&args);
     return 0;
 }
 ```

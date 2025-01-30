@@ -34,38 +34,13 @@ API:
 - functions:
     da_append        - append value to end of 'da'
     da_append_many   - append values from another array to end of 'da'
-    da_clear         - set all items and count as zero and save capacity,
-                       use `NULL` if not need dtor
-    da_free          - free memory by items and set all fields as zero,
-                       use `NULL` if not need dtor
-    da_remove        - call destroy function for item and shift other
-                       items, use `NULL` if not need dtor
-    da_remove_many   - call destroy function for items in range
-                       [`i`, `j`) and shift other items, use `NULL`
-                       if not need dtor
+    da_clear         - set all items and count as zero and save capacity
+    da_free          - free memory by items and set all fields as zero
+    da_remove        - call destroy function for item and shift other items
+    da_remove_many   - call destroy function for items in range [`i`, `j`)
+                       and shift other items
     da_reserve       - reserve places for items
     da_shrink_to_fit - reset capacity equal count
-
-Example:
-'''
-#include "dynamic_array.h"
-#include <stdio.h>
-
-typedef const char* cstr_t; // otherwise macro-magic cannot work
-DA_DEFINE_STRUCT(cstr_t, args_t)
-DA_DEFINE_APPEND_MANY(cstr_t)
-DA_DEFINE_FREE(cstr_t)
-
-int main(int argc, char** argv) {
-    args_t args = {0};
-    da_append_many(cstr_t)(&args, (cstr_t*)argv, argc);
-    DA_FOREACH(cstr_t, arg, &args) {
-        puts(*arg);
-    }
-    da_free(cstr_t)(&args, NULL);
-    return 0;
-}
-'''
 
 Footnotes:
     [1]: https://github.com/tsoding/nob.h
@@ -103,10 +78,11 @@ typedef struct DA_STRUCT_NAME(type) name;
 #define DA_DEFINE_CUSTOM_FIELDS_STRUCT(type, name, ...) \
 DA_DECLARE_STRUCT(type, name) \
 struct DA_STRUCT_NAME(type) { \
-    type*  items;    \
-    size_t count;    \
-    size_t capacity; \
-    __VA_ARGS__      \
+    type*  items;        \
+    size_t count;        \
+    size_t capacity;     \
+    void (*dtor)(type*); \
+    __VA_ARGS__          \
 };
 #define DA_DEFINE_STRUCT(type, name) \
 DA_DEFINE_CUSTOM_FIELDS_STRUCT(type, name, )
@@ -166,19 +142,16 @@ DA_DECLARE_APPEND_MANY(type) {                          \
  * @brief set all items at zero,
  * set `count` = 0 and save capacity
  * @param da pointer to dynamic array
- * @param dtor pointer to destroy function
- *             with signature `void (type*)`
  */
 #define da_clear(type) DA_FUNC_NAME(clear, type)
 #define DA_DECLARE_CLEAR(type)   \
 void da_clear(type)(             \
-struct DA_STRUCT_NAME(type)* da, \
-void (*dtor)(type*))
+struct DA_STRUCT_NAME(type)* da)
 #define DA_DEFINE_CLEAR(type)      \
 DA_DECLARE_CLEAR(type) {           \
-    if (dtor != NULL)              \
+    if (da->dtor != NULL)          \
         DA_FOREACH(type, item, da) \
-            dtor(item);            \
+            da->dtor(item);        \
     memset(da->items, 0, da->count \
         * sizeof(*da->items));     \
     da->count = 0;                 \
@@ -187,19 +160,16 @@ DA_DECLARE_CLEAR(type) {           \
 /**
  * @brief free memory for `da` and set fields at zero
  * @param da pointer to dynamic array
- * @param dtor pointer to destroy function
- *             with signature `void (type*)`
  */
 #define da_free(type) DA_FUNC_NAME(free, type)
 #define DA_DECLARE_FREE(type)    \
 void da_free(type)(              \
-struct DA_STRUCT_NAME(type)* da, \
-void (*dtor)(type*))
+struct DA_STRUCT_NAME(type)* da)
 #define DA_DEFINE_FREE(type)       \
 DA_DECLARE_FREE(type) {            \
-    if (dtor != NULL)              \
+    if (da->dtor != NULL)          \
         DA_FOREACH(type, item, da) \
-            dtor(item);            \
+            da->dtor(item);        \
     free(da->items);               \
     da->items = NULL;              \
     da->count = 0;                 \
@@ -211,20 +181,18 @@ DA_DECLARE_FREE(type) {            \
  * shift other items in [`index`+1, `da.count`)
  * @param da pointer to dynamic array
  * @param index valid index in range [0, `da.count`)
- * @param dtor pointer to destroy function
- *             with signature `void (type*)`
  */
 #define da_remove(type) DA_FUNC_NAME(remove, type)
 #define DA_DECLARE_REMOVE(type)    \
 void da_remove(type)(              \
 struct DA_STRUCT_NAME(type)* da,   \
-size_t index, void (*dtor)(type*))
+size_t index)
 #define DA_DEFINE_REMOVE(type)        \
 DA_DECLARE_REMOVE(type) {             \
     assert(index < da->count          \
         && "Out of range");           \
-    if (dtor != NULL)                 \
-        dtor(&da->items[index]);      \
+    if (da->dtor != NULL)             \
+        da->dtor(&da->items[index]);  \
     memmove(&da->items[index],        \
         &da->items[index] + 1,        \
         sizeof(*da->items) *          \
@@ -238,23 +206,20 @@ DA_DECLARE_REMOVE(type) {             \
  * @param da pointer to dynamic array
  * @param i begin index in range [`i`, `j`)
  * @param j end index in range [`i`, `j`)
- * @param dtor pointer to destroy function
- *             with signature `void (type*)`
  */
 #define da_remove_many(type) DA_FUNC_NAME(remove_many, type)
 #define DA_DECLARE_REMOVE_MANY(type) \
 void da_remove_many(type)(           \
 struct DA_STRUCT_NAME(type)* da,     \
-size_t i, size_t j,                  \
-void (*dtor)(type*))
+size_t i, size_t j)
 #define DA_DEFINE_REMOVE_MANY(type) \
 DA_DECLARE_REMOVE_MANY(type) {      \
     assert(i < da->count            \
         && j <= da->count           \
         && "Out of range");         \
-    if (dtor != NULL)               \
+    if (da->dtor != NULL)           \
         DA_FORLOOP(k, i, j)         \
-            dtor(&da->items[k]);    \
+            da->dtor(&da->items[k]);\
     memmove(&da->items[i],          \
         &da->items[j],              \
         sizeof(*da->items) *        \
